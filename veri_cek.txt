@@ -1,0 +1,46 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# ChromeDriver yolunu belirtiyoruz
+driver_path = ("kendi pathinizi girin")
+
+# ChromeDriver servisini başlatıyoruz
+service = Service(executable_path=driver_path)
+browser = webdriver.Chrome(service=service)
+
+# Hedef URL'ye gidiyoruz
+browser.get("https://www.science.org/journal/scirobotics/research")
+
+# Sayfa kaynağını alıyoruz
+kaynak = browser.page_source
+soup = BeautifulSoup(kaynak, 'html.parser')
+
+# Başlıkları saklamak için liste oluşturuyoruz
+liste = []
+
+# İlgili div sınıfını bulup başlıkları alıyoruz
+metinler = soup.find_all("div", attrs={"class": "d-flex justify-content-between align-items-end"})
+for metin in metinler:
+    baslik = metin.find("span", attrs={"class": "hlFld-Title"}).text
+    liste.append([baslik])
+
+# Verileri bir DataFrame'e dönüştürüyoruz
+veritabani = pd.DataFrame(liste)
+veritabani.columns = ["Makale Başlıkları"]
+
+# DataFrame'i Excel dosyasına kaydediyoruz
+veritabani.to_excel("makaleler.xlsx", index=False)
+
+sonraki_sayfa_butonu = soup.find("li", attrs={"class": "page-item__arrow--next page-item"})
+
+for a in sonraki_sayfa_butonu.find_all('a', href=True):
+    sonraki_sayfa_linki = a['href']
+    print(sonraki_sayfa_linki)
+browser.get(sonraki_sayfa_linki)
+
+
+
+# Tarayıcıyı kapatıyoruz
+browser.quit()
