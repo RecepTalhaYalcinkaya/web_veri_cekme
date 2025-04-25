@@ -1,0 +1,47 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from time import sleep
+from webdriver_manager.chrome import ChromeDriverManager
+
+# ChromeOptions ile gizli modda tarayıcı açma ayarlarını yap
+chrome_options = Options()
+chrome_options.add_argument("--incognito")
+chrome_options.add_argument("--headless")
+
+# Tarayıcı sürücüsünü başlat
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+driver.delete_all_cookies()
+driver.get("https://tr.tradingview.com/chart/?symbol=BIST%3ATHYAO")
+driver.implicitly_wait(10)
+
+# Fiyat eşiği TL cinsinden
+price_threshold_tl = 300  # TL cinsinden threshold
+
+try:
+    while True:
+        # Fiyat bilgisini içeren elementi bul
+        fiyat_bilgisi = driver.find_element(By.XPATH,
+                                            '/html/body/div[2]/div[6]/div/div[2]/div[1]/div[1]/div[2]/div[2]/div/div[2]/div[2]/span[1]/span[1]')
+        fiyat_text = fiyat_bilgisi.text.replace(',', '')  # Virgülleri kaldır ve düz metin olarak al
+
+        # Fiyat verisini doğru şekilde parse et
+        if '.' in fiyat_text or len(fiyat_text) <= 4:
+            # Fiyat normal bir şekilde verilmiş, doğrudan float'a dönüştür
+            fiyat_tl = float(fiyat_text)
+        else:
+            # Nokta veya virgül yoksa, fiyatı düzgün formatta al
+            fiyat_tl = float(fiyat_text[:-2] + '.' + fiyat_text[-2:])
+
+        print(f"Current THYAO price: {fiyat_tl} TL")
+
+        # Fiyatın belirli bir değerin altına düşüp düşmediğini kontrol et
+        if fiyat_tl < price_threshold_tl:
+            print(f"ALERT! THYAO price has dropped below {price_threshold_tl} TL: Current price is {fiyat_tl} TL")
+        else:
+            print(f"THYAO price is above {price_threshold_tl} TL. No alert.")
+
+        sleep(10)
+finally:
+    driver.quit()
